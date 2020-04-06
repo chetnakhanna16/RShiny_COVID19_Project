@@ -105,7 +105,69 @@ for (filename in filenames) {
 colnames(final_df)[which(names(final_df) == "Country_Region")] <- "Country" 
 
 #printing the final dataframe with updated COVID-19 data 
-final_df
+head(final_df)
+```
+
+```{r}
+#reading the CSV to get the country codes 'iso2'
+country_code <- read.csv('UID_ISO_FIPS_LookUp_Table.csv')
+head(country_code)
+```
+
+```{r}
+#taking only the country codes
+country_code$Province_State <- as.character(country_code$Province_State)
+head(country_code)
+```
+
+```{r}
+#taking only the country codes
+country_code_df <- country_code[country_code$Province_State == "",]
+head(country_code_df)
+```
+
+```{r}
+#changing the column name 'Country_Region' to 'Country'
+colnames(country_code_df)[which(names(country_code) == "Country_Region")] <- "Country" 
+head(country_code_df)
+```
+
+```{r}
+#joining our covid data frame and country codes data frame to get the codes for each country 
+final_df_code <- inner_join(final_df, country_code_df, by="Country")
+head(final_df_code)
+```
+
+```{r}
+#selecting only the required columns
+final_df_code <- final_df_code %>% dplyr::select(Country, Confirmed, Deaths, Recovered, Active, Date, iso2)
+head(final_df_code)
+```
+
+```{r}
+#reading the csv
+location <- read.csv("countries.csv")
+#changing the column names
+names(location) <- c("iso2", "Lat", "Long", "Country")
+head(location)
+```
+
+```{r}
+#joining the dataframes to get the country code
+final_df_covid <- left_join(final_df_code, location, by= c("iso2"))
+head(final_df_covid)
+```
+
+```{r}
+#selecting the required columns
+final_df_covid <- final_df_covid %>% dplyr::select(Country.x, Confirmed, Deaths, Recovered, Active, Date, Lat, Long)
+head(final_df_covid)
+```
+
+```{r}
+#changing the column names
+names(final_df_covid) <- c("Country","Confirmed","Deaths","Recovered","Active","Date","Lat","Long")
+head(final_df_covid)
 ```
 
 ```{r}
@@ -114,6 +176,6 @@ save_df_to_csv <- function(df) {
   write.csv(x=df, file="./Covid19.csv", row.names=FALSE)
 }
 
-save_df_to_csv(final_df)
+save_df_to_csv(final_df_covid)
 ```
 
