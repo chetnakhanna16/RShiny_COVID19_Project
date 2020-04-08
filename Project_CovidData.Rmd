@@ -18,16 +18,11 @@ library(httr)
 
 
 ```{r}
-#adding column 'Active' to the dataframe if it is not present
-add_active_col_if_not_present <- function(df) {
-  if ("Active" %in% colnames(df)) {
-    return(df)
-  }
-  else {
+#adding column 'Active' to the dataframe
+add_active_col <- function(df) {
     df$Active <- df$Confirmed - df$Deaths - df$Recovered
     df$Active <- as.integer(df$Active)
     return(df)
-  }
 }
 ```
 
@@ -53,10 +48,11 @@ change_colname <- function(df) {
 data_clean_from_url <- function(dir_name, filename) {
   filepath <- paste(dir_name, filename, sep="/")
   covid_file <- read.csv(url(filepath))
-  covid_file <- add_active_col_if_not_present(covid_file)
   covid_file <- change_colname(covid_file)
-  covid_file <- covid_file %>% dplyr::select(Country_Region, Confirmed, Deaths, Recovered, Active)
+  covid_file <- covid_file %>% dplyr::select(Country_Region, Confirmed, Deaths, Recovered)
   covid_file <- covid_file %>% group_by(Country_Region) %>% summarize_all(sum)
+  covid_file$Active <- NULL
+  covid_file <- add_active_col(covid_file)
   #making all NAs enteries to 0
   covid_file[is.na(covid_file)] <- 0
   #extracting date from the filename
@@ -108,9 +104,16 @@ colnames(final_df)[which(names(final_df) == "Country_Region")] <- "Country"
 head(final_df)
 ```
 
+
 ```{r}
 #reading the CSV to get the country codes 'iso2'
 country_code <- read.csv('UID_ISO_FIPS_LookUp_Table.csv')
+head(country_code)
+```
+
+```{r}
+country_code <- country_code %>% add_row(UID=10001, iso2="MW", iso3="MW", code3=10001, FIPS=NA, Admin2="", Province_State="", Country_Region="Malawi", Lat=-13.254308, Long_=34.301525, Combined_Key="Malawi")
+country_code <- country_code %>% add_row(UID=10002, iso2="SS", iso3="SS", code3=10002, FIPS=NA, Admin2="", Province_State="", Country_Region="South Sudan", Lat=6.8770, Long_=31.3070, Combined_Key="South Sudan")
 head(country_code)
 ```
 
@@ -134,7 +137,7 @@ head(country_code_df)
 
 ```{r}
 #joining our covid data frame and country codes data frame to get the codes for each country 
-final_df_code <- inner_join(final_df, country_code_df, by="Country")
+final_df_code <- left_join(final_df, country_code_df, by="Country")
 head(final_df_code)
 ```
 
@@ -156,6 +159,33 @@ head(location)
 #joining the dataframes to get the country code
 final_df_covid <- left_join(final_df_code, location, by= c("iso2"))
 head(final_df_covid)
+```
+
+```{r}
+#adding the latitude and longitude of Diamond Princess
+final_df_covid <- within(final_df_covid, {
+    f <- Country.x == 'Diamond Princess'
+    Lat[f] <- '37.09024'
+    Long[f] <- '-95.712891'
+})
+```
+
+```{r}
+#adding the latitude and longitude of MS Zaandam
+final_df_covid <- within(final_df_covid, {
+    g <- Country.x == 'MS Zaandam'
+    Lat[g] <- '52.442039'
+    Long[g] <- '4.829199'
+})
+```
+
+```{r}
+#adding the latitude and longitude of South Sudan
+final_df_covid <- within(final_df_covid, {
+    h <- Country.x == 'South Sudan'
+    Lat[h] <- '6.8770'
+    Long[h] <- '31.3070'
+})
 ```
 
 ```{r}
